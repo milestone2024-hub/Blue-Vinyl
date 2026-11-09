@@ -1,0 +1,567 @@
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { createRoot } from 'react-dom/client';
+import { addDelivery, albumArt, albumFile, deliverySchedule, demos, importAlbum, loadAlbums, loadInbox, localDay, localTime, resolveDelivery, saveAlbum, trackArt } from './archive';
+import { AlbumPlayer } from './album-player';
+import { ArtPicker } from './art-picker';
+import { BlankRecord, TripDetails } from './trip-details';
+import { HomeTurntable } from './home-turntable';
+import { JourneyConfirm, PressCompleted, PressRecord } from './press-record';
+import { ReturnMail, ShippingScreen } from './shipping';
+import { SongForm, TripMoment } from './trip-moment';
+import { Inbox } from './inbox';
+import { Arm, Icon, Plane, PullSleeve, Top, Vinyl, albumTitle, dateLabel, entryIcons, useMedia } from './ui';
+import { Recorder, TrackMedia } from './recorder';
+import { TravelMap } from './map';
+import './style.css';
+
+const newTrip = () => ({ name: '', city: '', country: '', start: localDay(), end: '' });
+const kindName = { photo: '사진', audio: '소리', video: '영상', memo: '메모' };
+const colors = ['#9da5b6', '#b99086', '#86a198', '#ae9cae'];
+const incoming = (album) => ({ id: crypto.randomUUID(), album, receivedAt: Date.now() });
+const completionTime = (album) => Date.parse(album.completedAt || album.end || album.start) || 0;
+
+function App() {
+  const [records, setRecords] = useState([]);
+  const [loaded, setLoaded] = useState(false);
+  const [page, setPage] = useState('home');
+  const [id, setId] = useState('');
+  const [sheet, setSheet] = useState('');
+  const [form, setForm] = useState(newTrip);
+  const [editingDetails, setEditingDetails] = useState(false);
+  const [engraving, setEngraving] = useState(false);
+  const [reviewFrom, setReviewFrom] = useState('trip');
+  const [pressFrom, setPressFrom] = useState('review');
+  const [preview, setPreview] = useState('');
+  const [inbox, setInbox] = useState([]);
+  const [inboxIndex, setInboxIndex] = useState(0);
+  const [previewDelivery, setPreviewDelivery] = useState(null);
+  const [shareLink, setShareLink] = useState('');
+  const [reviewDay, setReviewDay] = useState(localDay);
+  const [today, setToday] = useState(localDay);
+  const [momentNote, setMomentNote] = useState('');
+  const [trackId, setTrackId] = useState('');
+  const [playing, setPlaying] = useState(false);
+  const [memo, setMemo] = useState('');
+  const [editId, setEditId] = useState('');
+  const [artTrackId, setArtTrackId] = useState('');
+  const [notice, setNotice] = useState('');
+  const [busy, setBusy] = useState(false);
+  const saving = useRef(false);
+  const main = useRef(null);
+
+  useEffect(() => {
+    let active = true;
+    loadAlbums().then((albums) => { if (active) setRecords(albums); })
+      .catch(() => { if (active) setNotice('브라우저의 저장 공간을 열 수 없어요.'); })
+      .finally(() => { if (active) setLoaded(true); });
+    return () => { active = false; };
+  }, []);
+  useEffect(() => {
+    if (!loaded) return;
+    let active = true;
+    const receiving = new Set();
+    async function refreshInbox() {
+      try {
+        const items = await loadInbox();
+        if (active) setInbox(items);
+      } catch {
+        if (active) setNotice('받은 LP를 불러오지 못했어요.');
+      }
+    }
+    async function receiveLink() {
+      const hash = window.location.hash;
+      if (!hash.startsWith('#lp=') || receiving.has(hash)) return;
+      receiving.add(hash);
+      try {
+        if (hash.length > 12000) throw new Error('링크가 너무 길어요.');
+        const item = await importAlbum(new Blob([decodeURIComponent(hash.slice(4))]));
+        const delivery = incoming(item);
+        await addDelivery(delivery);
+        if (!active) return;
+        setInbox((items) => [delivery, ...items]);
+        setInboxIndex(0);
+        setPreviewDelivery(null);
+        setPlaying(false);
+        setPage('home');
+        setSheet('');
+        if (window.location.hash === hash) {
+          const cleanUrl = new URL(window.location.href);
+          cleanUrl.hash = '';
+          window.history.replaceState(null, '', cleanUrl);
+        }
+      } catch {
+        if (active) setNotice('공유 링크에서 LP를 열 수 없어요.');
+      } finally {
+        receiving.delete(hash);
+      }
+    }
+    refreshInbox().then(receiveLink);
+    window.addEventListener('hashchange', receiveLink);
+    return () => { active = false; window.removeEventListener('hashchange', receiveLink); };
+  }, [loaded]);
+  useEffect(() => { main.current?.scrollTo(0, 0); }, [page]);
+  useEffect(() => {
+    let timer;
+    function syncToday() {
+      setToday(localDay());
+      const next = new Date();
+      next.setHours(24, 0, 0, 50);
+      clearTimeout(timer);
+      timer = setTimeout(syncToday, next.getTime() - Date.now());
+    }
+    syncToday();
+    window.addEventListener('focus', syncToday);
+    return () => { window.removeEventListener('focus', syncToday); clearTimeout(timer); };
+  }, []);
+  useEffect(() => {
+    if (!notice) return;
+    const timer = setTimeout(() => setNotice(''), 5500);
+    return () => clearTimeout(timer);
+  }, [notice]);
+
+  const albums = [...records, ...demos.filter((demo) => !records.some((record) => record.id === demo.id))]
+    .sort((a, b) => b.start.localeCompare(a.start));
+  const shelfAlbums = albums.filter((item) => !item.delivery || item.delivery.arrivesOn <= today);
+  const album = previewDelivery?.album || albums.find((item) => item.id === id);
+  const cover = useMedia(albumArt(album));
+  const latestPhoto = album?.entries.findLast((entry) => entry.kind === 'photo');
+  const pressArt = album?.art || (latestPhoto ? { trackId: latestPhoto.id } : undefined);
+  const pressPhoto = useMedia(pressArt ? albumArt({ ...album, art: pressArt }) : undefined);
+  const orderedEntries = (album?.entries || []).slice().sort((a, b) => a.day.localeCompare(b.day));
+  const days = [...new Set([today, reviewDay, ...orderedEntries.map((entry) => entry.day)])].filter(Boolean).sort();
+  const tracks = page === 'review' ? orderedEntries.filter((entry) => entry.day === reviewDay) : orderedEntries;
+  const track = tracks.find((item) => item.id === trackId) || tracks[0];
+  const trackIndex = tracks.indexOf(track);
+  const chosenArt = useMedia(trackArt(album, track));
+  const artTrack = album?.entries.find((entry) => entry.id === artTrackId);
+
+  const go = useCallback((next) => {
+    setSheet('');
+    setPlaying(false);
+    setEngraving(false);
+    setPage(next);
+  }, []);
+  const showShipping = useCallback(() => go('shipping'), [go]);
+
+  function openAlbum(item) {
+    setPreviewDelivery(null);
+    setShareLink('');
+    setId(item.id);
+    setMomentNote('');
+    setTrackId('');
+    go(item.phase === 'pressed' ? 'play' : item.grooves?.length ? 'draft-disc' : 'trip');
+  }
+
+  async function persist(value, next) {
+    if (saving.current) return false;
+    saving.current = true;
+    setBusy(true);
+    try {
+      await saveAlbum(value);
+      setRecords((current) => [value, ...current.filter((item) => item.id !== value.id)]);
+      setId(value.id);
+      if (next) go(next);
+      return true;
+    } catch {
+      setNotice('저장하지 못했어요. 브라우저의 저장 공간을 확인해 주세요.');
+      return false;
+    } finally {
+      saving.current = false;
+      setBusy(false);
+    }
+  }
+
+  async function createTrip(event) {
+    event.preventDefault();
+    if (!form.name.trim() || (form.end && form.end < form.start)) {
+      setNotice('LP 이름과 일정을 확인해 주세요.');
+      return;
+    }
+    const details = {
+      ...form, name: form.name.trim(), city: form.city.trim(), country: form.country.trim(),
+    };
+    if (editingDetails) {
+      await persist({ ...album, ...details }, 'draft-disc');
+      return;
+    }
+    setMomentNote('');
+    await persist({
+      ...details, id: crypto.randomUUID(), entries: [], phase: 'trip',
+      color: colors[records.length % colors.length],
+    }, 'trip');
+  }
+
+  async function addEntry(entry) {
+    const now = new Date();
+    const next = { id: crypto.randomUUID(), ...entry, day: localDay(now), time: entry.time || localTime(now) };
+    if (await persist({ ...album, entries: [...album.entries, next] }, 'trip')) setTrackId(next.id);
+  }
+
+  async function pressMoment() {
+    const now = new Date();
+    const day = localDay(now);
+    const grooves = album.grooves || [];
+    const engravedIds = new Set(grooves.flatMap((groove) => groove.entryIds));
+    const note = momentNote.trim();
+    const entries = note ? [...album.entries, {
+      id: crypto.randomUUID(), day, time: localTime(now), kind: 'memo', name: '여행 메모', note,
+    }] : album.entries;
+    const pending = new Map();
+    for (const entry of entries) {
+      if (engravedIds.has(entry.id)) continue;
+      const date = entry.day || day;
+      if (!pending.has(date)) pending.set(date, []);
+      pending.get(date).push(entry.id);
+    }
+    if (!pending.size) { go('draft-disc'); return; }
+    const newGrooves = [...pending].sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, entryIds]) => ({ day: date, entryIds }));
+    if (await persist({ ...album, entries, grooves: [...grooves, ...newGrooves] }, 'draft-disc')) {
+      setMomentNote('');
+      setEngraving(true);
+    }
+  }
+
+  function saveSong(song) {
+    if (!song.blob.type.startsWith('audio/') || song.blob.size > 35 * 1024 * 1024) {
+      setNotice('35MB 이하의 오디오 파일을 선택해 주세요.');
+      return;
+    }
+    addEntry({ ...song, kind: 'audio' });
+  }
+
+  function attach(event, fieldRecording = false) {
+    const file = event.target.files[0];
+    event.target.value = '';
+    if (!file) return;
+    const kind = { image: 'photo', audio: 'audio', video: 'video' }[file.type.split('/')[0]];
+    if (!kind) { setNotice('사진, 오디오 또는 영상 파일을 선택해 주세요.'); return; }
+    if (file.size > 35 * 1024 * 1024) { setNotice('35MB 이하 파일을 선택해 주세요.'); return; }
+    addEntry({ kind, name: file.name.replace(/\.[^.]+$/, ''), blob: file, fieldRecording });
+  }
+
+  function review() {
+    setReviewFrom(page === 'draft-disc' ? 'draft-disc' : 'trip');
+    const hasToday = orderedEntries.some((entry) => entry.day === today);
+    setReviewDay(page === 'draft-disc' && !hasToday ? album.grooves?.at(-1)?.day || today : today);
+    setTrackId('');
+    go('review');
+  }
+
+  function finishAlbum() {
+    setSheet('finish-journey');
+  }
+
+  function confirmJourney() {
+    setPressFrom(page);
+    go('press');
+  }
+
+  function pressAlbum() {
+    return persist({
+      ...album, phase: 'pressed', completedAt: new Date().toISOString(), art: pressArt,
+      end: album.end || (today < album.start ? album.start : today), delivery: deliverySchedule(),
+    }, 'complete');
+  }
+
+  async function saveDelivery(delivery) {
+    if (await persist({ ...album, delivery })) goHome();
+  }
+
+  function editDraftDetails() {
+    setForm({ name: album.name || albumTitle(album), city: album.city, country: album.country, start: album.start, end: album.end });
+    setEditingDetails(true);
+    go('create');
+  }
+
+  function playTrack(entry) {
+    setPlaying(false);
+    setTrackId(entry.id);
+  }
+
+  async function moveTrack(entry, delta) {
+    const entries = [...album.entries];
+    const sameDay = entries.filter((item) => item.day === entry.day);
+    const swap = sameDay[sameDay.indexOf(entry) + delta];
+    if (!swap) return;
+    const a = entries.indexOf(entry);
+    const b = entries.indexOf(swap);
+    [entries[a], entries[b]] = [entries[b], entries[a]];
+    await persist({ ...album, entries });
+  }
+
+  function openMemo(entry) {
+    setEditId(entry?.id || '');
+    setMemo(entry?.note || '');
+    setSheet('memo');
+  }
+
+  async function saveMemo(event) {
+    event.preventDefault();
+    if (!memo.trim()) return;
+    if (!editId) { await addEntry({ kind: 'memo', name: '여행 메모', note: memo.trim() }); return; }
+    const entries = album.entries.map((entry) => entry.id === editId ? { ...entry, note: memo.trim() } : entry);
+    if (await persist({ ...album, entries })) setSheet('');
+  }
+
+  function chooseArt(entry) {
+    setArtTrackId(entry?.id || '');
+    setSheet('art');
+  }
+
+  async function saveArt(art) {
+    const updated = artTrack
+      ? { ...album, entries: album.entries.map((entry) => entry.id === artTrack.id ? { ...entry, art } : entry) }
+      : { ...album, art };
+    if (await persist(updated)) setSheet('');
+  }
+
+  function uploadArt(event) {
+    const file = event.target.files[0];
+    event.target.value = '';
+    if (!file) return;
+    if (!file.type.startsWith('image/') || file.size > 35 * 1024 * 1024) {
+      setNotice('35MB 이하의 사진 파일을 선택해 주세요.');
+      return;
+    }
+    saveArt({ blob: file });
+  }
+
+  async function downloadAlbum() {
+    setBusy(true);
+    try {
+      const file = await albumFile(album);
+      const url = URL.createObjectURL(file);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = file.name;
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 30000);
+      setNotice('앨범 파일을 내보냈어요.');
+    } catch {
+      setNotice('앨범 파일을 저장하지 못했어요.');
+    } finally { setBusy(false); }
+  }
+
+  function playDelivery(delivery) {
+    setPreviewDelivery(delivery);
+    setTrackId(delivery.album.entries.find(({ kind }) => kind === 'audio' || kind === 'video')?.id || '');
+    go('play');
+  }
+
+  async function finishDelivery(delivery, keep) {
+    if (saving.current || busy) return;
+    saving.current = true;
+    setBusy(true);
+    try {
+      await resolveDelivery(delivery, keep);
+      if (keep) {
+        const item = delivery.album;
+        setRecords((items) => [item, ...items.filter((record) => record.id !== item.id)]);
+      }
+      setInbox((items) => items.filter((item) => item.id !== delivery.id));
+      setInboxIndex(0);
+      if (inbox.length === 1 && sheet === 'inbox') setSheet('');
+      if (keep && previewDelivery) {
+        setId(delivery.album.id);
+        setPreviewDelivery(null);
+      }
+      if (keep) setNotice('받은 LP를 내 선반에 담았어요.');
+    } catch {
+      setNotice('받은 LP를 처리하지 못했어요. 다시 시도해 주세요.');
+    } finally {
+      saving.current = false;
+      setBusy(false);
+    }
+  }
+
+  async function makeShareLink() {
+    setBusy(true);
+    try {
+      const file = await albumFile(album);
+      if (file.size > 11996) throw new Error();
+      const hash = 'lp=' + encodeURIComponent(await file.text());
+      if (hash.length >= 12000) throw new Error();
+      const url = new URL(window.location.href);
+      url.hash = hash;
+      setShareLink(url.href);
+    } catch {
+      setNotice('이 LP는 공유 링크로 만들기에는 커요.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const goHome = () => { setPreview(''); setPreviewDelivery(null); go('home'); };
+  const latest = shelfAlbums.filter((item) => item.phase === 'pressed')
+    .sort((a, b) => completionTime(b) - completionTime(a))[0];
+  const returnFromPlayer = () => {
+    if (previewDelivery) {
+      setPreviewDelivery(null);
+      go('home');
+      if (inbox.length) setSheet('inbox');
+    } else go(page === 'review' ? reviewFrom : 'home');
+  };
+
+  return <div className="desk">
+    <aside className="desk-brand" aria-hidden="true"><Icon name="disc" size={26} /><span>BLUE VINYL</span><small>TRAVEL RECORDS</small></aside>
+    <div className={'app ' + (page === 'home' ? 'home-app' : '')}>
+      <main className={'screen ' + page} ref={main}>
+        {page === 'home' && <>
+          <HomeTurntable key={latest.id} album={latest} open={() => openAlbum(latest)}>
+            {inbox.length > 0 && <button className="plane-button" onClick={() => { setInboxIndex(0); setSheet('inbox'); }}
+              aria-label="종이비행기 · 받은 LP">
+              <Plane />
+            </button>}
+          </HomeTurntable>
+          <section className="shelf" aria-label="LP 리스트">
+            <button className="empty-sleeve" disabled={!loaded} onClick={() => { setForm(newTrip()); setEditingDetails(false); go('blank'); }}>
+              <span className="spine">+ Add New Album</span><span className="empty-face"><Icon name="plus" size={25} /></span>
+            </button>
+            {shelfAlbums.map((item, index) => <div className="shelf-item" key={item.id}>
+              <button className={'sleeve sleeve-' + index % 3} aria-expanded={preview === item.id}
+                onClick={() => setPreview(preview === item.id ? '' : item.id)}>
+                <span className="spine"><strong>{albumTitle(item)}</strong><span>{dateLabel(item.start)}</span>{item.phase === 'trip' && <i />}</span>
+                <span className="sleeve-face" />
+              </button>
+              {preview === item.id && <PullSleeve album={item} open={() => openAlbum(item)} />}
+            </div>)}
+          </section>
+          <div className="home-foot"><span>BLUE VINYL · 33⅓ RPM</span><button onClick={() => go('map')}><Icon name="pin" size={13} /> 여행 지도</button></div>
+        </>}
+
+        {page === 'blank' && <BlankRecord back={goHome} enter={() => go('create')} />}
+        {page === 'draft-disc' && album && <BlankRecord enter={editDraftDetails} finish={finishAlbum}
+          menu={() => setSheet('draft-menu')} record={() => go('trip')} grooveCount={album.grooves?.length || 0} engraving={engraving} />}
+        {page === 'create' && <TripDetails form={form} update={(patch) => setForm((value) => ({ ...value, ...patch }))}
+          save={createTrip} busy={busy} back={() => go(editingDetails ? 'draft-disc' : 'blank')} />}
+
+        {page === 'trip' && album && <TripMoment album={album} entries={orderedEntries.filter((entry) => entry.day === today)}
+          day={today}
+          note={momentNote} setNote={setMomentNote} menu={() => setSheet('trip-menu')}
+          attach={attach} add={() => setSheet('song')} press={pressMoment} busy={busy} />}
+
+        {page === 'record' && album && <>
+          <Top title="FIELD RECORDING" back={() => go('trip')} />
+          <div className="record-title"><p className="eyebrow">CAPTURE A SOUND</p><h1>{albumTitle(album)}</h1><p className="muted">{today}</p></div>
+          <div className="record-stage"><Vinyl color={album.color} image={cover} /><Arm /></div>
+          <Recorder onSave={(blob) => addEntry({ kind: 'audio', name: '현장의 소리', blob, fieldRecording: true })}
+            onFile={(event) => attach(event, true)} />
+        </>}
+
+        {page === 'play' && album && <AlbumPlayer key={album.id} album={album} art={track ? chosenArt : cover}
+          tracks={tracks} track={track} onTrack={playTrack} back={returnFromPlayer} busy={busy} autoStart={Boolean(previewDelivery)}
+          send={previewDelivery ? undefined : () => { setNotice(''); go('send-lp'); }}
+          save={previewDelivery ? () => finishDelivery(previewDelivery, true) : undefined} />}
+        {page === 'send-lp' && album && <ReturnMail album={album} back={() => go('play')}
+          createLink={['http:', 'https:'].includes(window.location.protocol) ? makeShareLink : undefined}
+          shareLink={shareLink} download={downloadAlbum} busy={busy} />}
+
+        {page === 'review' && album && <>
+          <Top title="TODAY’S TRACK" back={returnFromPlayer} action={() => setSheet('edit')} actionIcon="edit" actionLabel="트랙 편집" />
+          <div className="player-art"><Vinyl color={album.color} image={cover} playing={playing} /><Arm /></div>
+          <section className="content player-content">
+            <p className="eyebrow">DAILY REPLAY</p>
+            <h1>오늘의 트랙 감상</h1>
+            <label className="day-label"><Icon name="calendar" size={16} /> 날짜<select value={reviewDay} onChange={(event) => { setReviewDay(event.target.value); setTrackId(''); setPlaying(false); }}>
+              {days.map((value) => <option key={value}>{value}</option>)}
+            </select></label>
+            <div className="media-card">
+              <div className="track-meta"><span>{track ? String(trackIndex + 1).padStart(2, '0') + ' / ' + String(tracks.length).padStart(2, '0') : '00 / 00'}</span><span>{track ? track.day : reviewDay}</span></div>
+              {track && <h2>{track.name}</h2>}
+              <TrackMedia key={track?.id} entry={track} onPlay={setPlaying} />
+              {tracks.length > 1 && <div className="transport">
+                <button className="icon-button" aria-label="이전 트랙" disabled={trackIndex <= 0} onClick={() => playTrack(tracks[trackIndex - 1])}><Icon name="back" /></button>
+                <button className="icon-button" aria-label="다음 트랙" disabled={trackIndex >= tracks.length - 1} onClick={() => playTrack(tracks[trackIndex + 1])}><Icon name="next" /></button>
+              </div>}
+            </div>
+            <TrackList entries={tracks} current={track?.id} onSelect={playTrack} hideEmpty />
+            <div className="bottom-actions">
+              <button className="secondary" onClick={() => go('trip')}>여행 계속</button>
+              <button className="primary" onClick={finishAlbum}>여행 끝 <Icon name="next" size={16} /></button>
+            </div>
+          </section>
+        </>}
+
+        {page === 'press' && album && <PressRecord photo={pressPhoto} busy={busy} back={() => go(pressFrom)}
+          choose={() => chooseArt()} complete={pressAlbum} />}
+        {page === 'complete' && album && <PressCompleted album={album} photo={cover} next={showShipping} />}
+        {page === 'shipping' && album?.delivery && <ShippingScreen album={album} busy={busy} save={saveDelivery} />}
+        {page === 'map' && <TravelMap albums={shelfAlbums.filter((item) => item.phase === 'pressed')} back={goHome} open={openAlbum} />}
+      </main>
+
+      {sheet === 'inbox' && inbox.length > 0 && <Inbox items={inbox} index={inboxIndex} onIndex={setInboxIndex} close={() => setSheet('')}
+        play={playDelivery} save={(delivery) => finishDelivery(delivery, true)}
+        discard={(delivery) => finishDelivery(delivery, false)} busy={busy} notice={notice} />}
+      {sheet === 'finish-journey' && <JourneyConfirm confirm={confirmJourney} close={() => setSheet('')} />}
+      {sheet && sheet !== 'inbox' && sheet !== 'finish-journey' && <Sheet key={sheet} close={() => setSheet('')} title={{
+        add: '트랙 추가', song: '들은 노래 기록', memo: editId ? '메모 편집' : '여행 메모',
+        edit: '트랙 편집', art: artTrack ? '트랙 사진 선택' : 'LP 커버 선택', 'trip-menu': '여행 메뉴', 'draft-menu': 'LP 메뉴',
+      }[sheet]}>
+        {sheet === 'art' && album && <ArtPicker album={album} track={artTrack} choose={saveArt} upload={uploadArt} busy={busy} />}
+        {sheet === 'song' && <SongForm day={today} save={saveSong} busy={busy} />}
+        {sheet === 'add' && <>
+          <label className="sheet-row file-label"><Icon name="camera" /> 사진 추가<input type="file" accept="image/*" onChange={attach} /></label>
+          <button className="sheet-row" onClick={() => setSheet('song')}><Icon name="audio" /> 들은 노래 기록</button>
+          <label className="sheet-row file-label"><Icon name="video" /> 영상 추가<input type="file" accept="video/*" onChange={attach} /></label>
+          <button className="sheet-row" onClick={() => openMemo()}><Icon name="memo" /> 메모 추가</button>
+        </>}
+        {sheet === 'memo' && <form className="memo-form" onSubmit={saveMemo}>
+          <label>기억하고 싶은 순간<textarea required maxLength={3000} rows={5} value={memo} onChange={(event) => setMemo(event.target.value)} placeholder="지금 보고 듣고 느낀 것을 적어보세요." /></label>
+          <button type="submit" className="primary" disabled={busy || !memo.trim()}>메모 저장</button>
+        </form>}
+        {sheet === 'edit' && <>
+          <p className="muted">트랙 사진을 고르고, 메모와 재생 순서를 편집할 수 있어요.</p>
+          {tracks.length === 0 && <p className="muted">편집할 트랙이 없어요.</p>}
+          {tracks.map((entry, index) => <div className="edit-row" key={entry.id}>
+            <Icon name={entryIcons[entry.kind]} /><span>{entry.name}</span>
+            <button className="icon-button" onClick={() => chooseArt(entry)} aria-label={entry.name + ' 사진 선택'}><Icon name="camera" size={16} /></button>
+            {entry.kind === 'memo' && <button className="icon-button" onClick={() => openMemo(entry)} aria-label="메모 수정"><Icon name="edit" size={16} /></button>}
+            <button className="icon-button" disabled={busy || index === 0} onClick={() => moveTrack(entry, -1)} aria-label="위로 이동"><Icon name="up" size={16} /></button>
+            <button className="icon-button" disabled={busy || index === tracks.length - 1} onClick={() => moveTrack(entry, 1)} aria-label="아래로 이동"><Icon name="down" size={16} /></button>
+          </div>)}
+        </>}
+        {sheet === 'trip-menu' && <>
+          <button className="sheet-row" onClick={() => setSheet('add')}><Icon name="plus" /> 트랙 추가</button>
+          <button className="sheet-row" onClick={() => go('record')}><Icon name="mic" /> 현장 녹음</button>
+          <button className="sheet-row" onClick={review}><Icon name="play" /> 오늘의 트랙 감상</button>
+          <button className="sheet-row" onClick={finishAlbum}><Icon name="disc" /> 여행 끝 · LP 프레싱</button>
+          {album.grooves?.length > 0 && <button className="sheet-row" onClick={() => go('draft-disc')}><Icon name="back" /> LP 화면으로 돌아가기</button>}
+          <button className="sheet-row" onClick={goHome}><Icon name="back" /> 선반으로 돌아가기</button>
+        </>}
+        {sheet === 'draft-menu' && <>
+          <button className="sheet-row" onClick={review}><Icon name="play" /> 오늘의 트랙 감상</button>
+          <button className="sheet-row" onClick={editDraftDetails}><Icon name="edit" /> LP 정보 편집</button>
+          <button className="sheet-row" onClick={finishAlbum}><Icon name="disc" /> 여행 끝 · LP 프레싱</button>
+          <button className="sheet-row" onClick={goHome}><Icon name="back" /> 선반으로 돌아가기</button>
+        </>}
+        {notice && <p className="error" role="status">{notice}</p>}
+      </Sheet>}
+      {notice && !sheet && <div className="toast" role="status">{notice}</div>}
+    </div>
+  </div>;
+}
+
+function Sheet({ title, close, children }) {
+  const dialog = useRef(null);
+  useEffect(() => { dialog.current.showModal(); }, []);
+  return <dialog className="sheet-dialog" ref={dialog} onCancel={(event) => { event.preventDefault(); close(); }}
+    onClick={(event) => { if (event.target === event.currentTarget) close(); }} aria-labelledby="sheet-title">
+    <section className="sheet">
+      <header><h2 id="sheet-title">{title}</h2><button className="icon-button" aria-label="닫기" onClick={close}><Icon name="close" /></button></header>
+      {children}
+    </section>
+  </dialog>;
+}
+
+function TrackList({ entries, current, onSelect, hideEmpty }) {
+  if (!entries.length) return hideEmpty ? null : <p className="empty-track">이 날의 첫 트랙을 추가해 보세요.</p>;
+  return <ol className="track-list">{entries.map((entry, index) => <li key={entry.id}>
+    <button onClick={() => onSelect(entry)} aria-current={current === entry.id ? 'true' : undefined}>
+      <span className="track-no">{String(index + 1).padStart(2, '0')}</span><Icon name={entryIcons[entry.kind]} size={17} />
+      <span className="track-name">{entry.name}</span><small>{kindName[entry.kind]}</small><Icon name="next" size={15} />
+    </button>
+  </li>)}</ol>;
+}
+
+createRoot(document.getElementById('root')).render(<App />);

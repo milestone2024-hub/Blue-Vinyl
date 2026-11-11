@@ -110,6 +110,12 @@ export function Top({ title, back, action, actionIcon = 'list', actionLabel = 'ë
   </header>;
 }
 
+// The sleeve's top edge, cut from the same photo so the colour runs on.
+export function Spine({ album, children }) {
+  const photo = useMedia(albumArt(album));
+  return <span className={'spine' + (photo ? ' spine-photo' : '')} style={photo ? { '--spine-img': 'url("' + photo + '")' } : undefined}>{children}</span>;
+}
+
 export function SleeveFace({ album }) {
   const photo = useMedia(albumArt(album));
   return <span className="sleeve-face">{photo && <img src={photo} alt="" loading="lazy" />}</span>;

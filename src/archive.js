@@ -110,7 +110,7 @@ function selectedArt(album, art) {
 
 // Albums without a chosen photo get one of the sample travel photos, picked
 // pseudo-randomly from the album id so each album keeps the same one.
-const fillerPhotos = ['sky-wing.jpg', 'carry-on.jpg', 'boarding-bridge.jpg']
+export const fillerPhotos = ['sky-wing.jpg', 'carry-on.jpg', 'boarding-bridge.jpg']
   .map((file) => ({ id: 'filler-' + file, kind: 'photo', filler: true, src: import.meta.env.BASE_URL + 'art/' + file }));
 
 function fillerArt(album) {

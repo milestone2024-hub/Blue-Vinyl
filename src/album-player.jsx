@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { albumArt, fillerPhotos } from './archive';
 import { MomentMap } from './moment-map';
-import { albumTitle, Arm, Icon, Top, useMedia, Vinyl } from './ui';
+import { albumTitle, Icon, Top, useMedia, Vinyl } from './ui';
 
 export function AlbumPlayer({ album, art, tracks, track, onTrack, back, send, autoStart, save, busy }) {
   const [playing, setPlaying] = useState(false);
@@ -70,6 +71,7 @@ export function AlbumPlayer({ album, art, tracks, track, onTrack, back, send, au
     onError: () => setError('이 트랙을 열 수 없어요.'),
   };
   const showVideo = track?.kind === 'video' && (reveal || playing);
+  const panels = gridPanels(album);
 
   if (zoom === 'moments') return <MomentMap album={album} tracks={tracks} back={() => setZoom('record')} />;
 
@@ -85,10 +87,14 @@ export function AlbumPlayer({ album, art, tracks, track, onTrack, back, send, au
       }}
       onTouchEnd={() => { startDistance.current = 0; }}
       onTouchCancel={() => { startDistance.current = 0; }}>
-      <button className="focus-record" onClick={play} disabled={!track} aria-label={isMedia ? (playing ? '일시정지' : '트랙 재생') : '트랙 열기'}>
-        <Vinyl image={art} color={album.color} playing={playing} />
-      </button>
-      <span className="focus-arm"><Arm /></span>
+      <div className="focus-grid">
+        <GridPhoto entry={panels[0]} slot="a" tracks={tracks} onTrack={onTrack} />
+        <button className="focus-record" onClick={play} disabled={!track} aria-label={isMedia ? (playing ? '일시정지' : '트랙 재생') : '트랙 열기'}>
+          <Vinyl image={art} color={album.color} playing={playing} />
+        </button>
+        <GridPhoto entry={panels[1]} slot="b" tracks={tracks} onTrack={onTrack} />
+        <GridPhoto entry={panels[2]} slot="c" tracks={tracks} onTrack={onTrack} />
+      </div>
       <button className="focus-zoom" onClick={openMoments} disabled={zoom === 'transition'}>
         <Icon name="zoom" size={16} /> LP 확대
       </button>
@@ -119,4 +125,28 @@ export function AlbumPlayer({ album, art, tracks, track, onTrack, back, send, au
       {track.kind === 'memo' && <blockquote className="memo-view">{track.note}</blockquote>}
     </section>}
   </div>;
+}
+
+// Three photo panels around the record (top-left, bottom-left, bottom-right).
+// The album cover takes the bottom-right; other album photos fill the rest,
+// and sample travel photos cover any gap.
+function gridPanels(album) {
+  const cover = albumArt(album);
+  const photos = album.entries.filter((entry) => entry.kind === 'photo' && entry.id !== cover?.id);
+  const picks = [...photos];
+  for (const filler of fillerPhotos) {
+    if (picks.length >= 2) break;
+    if (filler.id !== cover?.id) picks.push(filler);
+  }
+  return [picks[0], picks[1], cover];
+}
+
+function GridPhoto({ entry, slot, tracks, onTrack }) {
+  const src = useMedia(entry);
+  const track = tracks.find((item) => item.id === entry?.id);
+  const image = src ? <img src={src} alt="" draggable="false" /> : null;
+  if (track) {
+    return <button type="button" className={'focus-photo photo-' + slot} aria-label={track.name + ' 트랙 열기'} onClick={() => onTrack(track)}>{image}</button>;
+  }
+  return <div className={'focus-photo photo-' + slot} aria-hidden="true">{image}</div>;
 }

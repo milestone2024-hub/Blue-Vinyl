@@ -8,7 +8,6 @@ import { HomeTurntable } from './home-turntable';
 import { JourneyConfirm, PressCompleted, PressRecord } from './press-record';
 import { ReturnMail, ShippingScreen } from './shipping';
 import { SongForm, TripMoment } from './trip-moment';
-import { Inbox } from './inbox';
 import { AirmailArrival, PaperPlane } from './airmail';
 import { Arm, Icon, Plane, PullSleeve, SleeveFace, Top, Vinyl, albumTitle, dateLabel, entryIcons, useMedia } from './ui';
 import { Recorder, TrackMedia } from './recorder';
@@ -495,7 +494,7 @@ function App() {
         {page === 'play' && album && <AlbumPlayer key={album.id} album={album} art={(track && chosenArt) || cover}
           tracks={tracks} track={track} onTrack={playTrack} back={returnFromPlayer} busy={busy} autoStart={Boolean(previewDelivery)}
           send={previewDelivery ? undefined : () => { setNotice(''); go('send-lp'); }}
-          save={previewDelivery ? () => finishDelivery(previewDelivery, true) : undefined} />}
+          />}
         {page === 'send-lp' && album && <ReturnMail album={album} back={() => go('play')}
           createLink={['http:', 'https:'].includes(window.location.protocol) ? makeShareLink : undefined}
           shareLink={shareLink} download={downloadAlbum} busy={busy} />}
@@ -533,13 +532,13 @@ function App() {
         {page === 'map' && <TravelMap albums={shelfAlbums.filter((item) => item.phase === 'pressed')} back={goHome} open={openAlbum} />}
       </main>
 
-      {sheet === 'inbox' && inbox.length > 0 && <Inbox items={inbox} index={inboxIndex} onIndex={setInboxIndex} close={() => setSheet('')}
-        play={playDelivery} save={(delivery) => finishDelivery(delivery, true)}
-        discard={(delivery) => finishDelivery(delivery, false)} busy={busy} notice={notice} />}
-      {airmail && <AirmailArrival key={airmail.id} delivery={airmail} busy={busy}
+      {sheet === 'inbox' && inbox.length > 0 && !airmail && <AirmailArrival key={inbox[0].id} delivery={inbox[0]} startAt="land"
+        play={(delivery) => { setSheet(''); playDelivery(delivery); }}
+        release={(delivery) => finishDelivery(delivery, false)}
+        later={() => setSheet('')} />}
+      {airmail && <AirmailArrival key={airmail.id} delivery={airmail}
         play={(delivery) => { setAirmail(null); playDelivery(delivery); }}
-        save={async (delivery) => { await finishDelivery(delivery, true); setAirmail(null); }}
-        release={async (delivery) => { await finishDelivery(delivery, false); setAirmail(null); }}
+        release={async (delivery) => { setAirmail(null); await finishDelivery(delivery, false); }}
         later={() => setAirmail(null)} />}
       {sheet === 'finish-journey' && <JourneyConfirm confirm={confirmJourney} close={() => setSheet('')} />}
       {sheet && sheet !== 'inbox' && sheet !== 'finish-journey' && <Sheet key={sheet} close={() => setSheet('')} title={{

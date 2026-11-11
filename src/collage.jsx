@@ -5,7 +5,7 @@ import { Vinyl } from './ui';
 // photos are measured, then sized by shape (portrait = tall panel, landscape =
 // wide spread, square = single panel) and packed onto a 3-column grid. The LP
 // sits in a sleeve panel, and gaps left by the packing become a track-list
-// panel or extra photo panels, so every layout comes out as a full rectangle.
+// one-line diary panel (the album's memos) or extra photo panels, so every layout comes out as a full rectangle.
 
 const COLS = 3;
 const MAX_ROWS = 4;
@@ -141,11 +141,13 @@ export function Spread({ plan, album, art, playing, onPlay, playLabel, disabled,
         </button>;
       }
       if (item.kind === 'list') {
-        return <div key="list" className="spread-list" style={style}>
-          <strong>{title}</strong>
-          <ol>{tracks.map((entry) => <li key={entry.id}>
-            <button type="button" className={entry.id === track?.id ? 'current' : ''} onClick={() => onTrack(entry)}>{entry.name}</button>
-          </li>)}</ol>
+        const memos = tracks.filter((entry) => entry.kind === 'memo' && entry.note);
+        return <div key="list" className="spread-memo" style={style}>
+          {memos.length ? memos.map((memo) => <button type="button" key={memo.id} onClick={() => onTrack(memo)}
+            className={memo.id === track?.id ? 'current' : ''}>
+            <time>{memo.day?.replaceAll('-', '.')}</time>
+            <q>{memo.note}</q>
+          </button>) : <strong>{title}</strong>}
         </div>;
       }
       if (item.kind === 'blank') return <div key={'blank-' + index} className="spread-blank" style={style} />;

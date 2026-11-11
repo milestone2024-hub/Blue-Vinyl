@@ -115,6 +115,17 @@ export function AlbumPlayer({ album, art, tracks, track, onTrack, back, send, au
       </div>}
       {view === 'collage' && plan && <Spread plan={plan} album={album} art={art} playing={playing} onPlay={openRecord} playLabel="LP 크게 보기" disabled={!track}
         tracks={tracks} track={track} onTrack={(entry) => { onTrack(entry); setReveal(false); }} title={albumTitle(album)} />}
+      {view === 'collage' && tracks.length > 0 && <section className="track-sheet" aria-label="트랙 리스트">
+        <h2>Tracks</h2>
+        <ol>{tracks.map((entry, i) => <li key={entry.id}>
+          <button type="button" className={entry.id === track?.id ? 'current' : ''} aria-current={entry.id === track?.id ? 'true' : undefined}
+            onClick={() => { onTrack(entry); setReveal(false); }}>
+            <span className="track-sheet-no">{String(i + 1).padStart(2, '0')}</span>
+            <span className="track-sheet-name">{entry.name}</span>
+            <span className="track-sheet-meta">{entry.time || entry.day?.slice(5).replace('-', '.')}</span>
+          </button>
+        </li>)}</ol>
+      </section>}
       <button className="focus-zoom" onClick={openMoments} disabled={zoom === 'transition'}>
         <Icon name="zoom" size={16} /> LP 확대
       </button>

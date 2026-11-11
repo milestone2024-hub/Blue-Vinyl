@@ -62,11 +62,11 @@ function sample(src) {
 export function toneFrom([h, s]) {
   const soft = clamp(s, 0.08, 0.42);
   return {
-    '--tone-bg': hsl(h, soft * 0.8, 0.88),
-    '--tone-bg2': hsl(h, soft * 0.9, 0.82),
+    '--tone-bg': hsl(h, soft * 0.42, 0.95),
+    '--tone-bg2': hsl(h, soft * 0.5, 0.92),
     '--tone-ink': hsl(h, clamp(s, 0.12, 0.38), 0.21),
     '--tone-soft': hsl(h, soft * 0.7, 0.45),
-    '--tone-paper': hsl(h, soft * 0.45, 0.94),
+    '--tone-paper': hsl(h, soft * 0.25, 0.975),
     '--lp': hsl(h, clamp(s * 1.25, 0.32, 0.72), 0.56),
     '--lp-deep': hsl(h, clamp(s * 1.2, 0.3, 0.68), 0.4),
   };

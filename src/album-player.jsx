@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { albumArt, fillerPhotos } from './archive';
+import { chooseLayout, planSpread, Spread, useMeasuredPhotos } from './collage';
 import { MomentMap } from './moment-map';
 import { albumTitle, Icon, Top, useMedia, Vinyl } from './ui';
 
@@ -72,6 +73,11 @@ export function AlbumPlayer({ album, art, tracks, track, onTrack, back, send, au
   };
   const showVideo = track?.kind === 'video' && (reveal || playing);
   const panels = gridPanels(album);
+  const measured = useMeasuredPhotos([panels[2], ...panelPool(album, panels[2])]);
+  const layout = measured.length ? chooseLayout(measured) : 'pending';
+  const coverPhoto = measured.find((photo) => photo.entry.id === panels[2]?.id);
+  const plan = layout === 'spread' ? planSpread(coverPhoto, measured.filter((photo) => photo !== coverPhoto)) : null;
+  const playLabel = isMedia ? (playing ? '일시정지' : '트랙 재생') : '트랙 열기';
 
   if (zoom === 'moments') return <MomentMap album={album} tracks={tracks} back={() => setZoom('record')} />;
 
@@ -87,14 +93,16 @@ export function AlbumPlayer({ album, art, tracks, track, onTrack, back, send, au
       }}
       onTouchEnd={() => { startDistance.current = 0; }}
       onTouchCancel={() => { startDistance.current = 0; }}>
-      <div className="focus-grid">
+      {layout === 'grid' && <div className="focus-grid">
         <GridPhoto entry={panels[0]} slot="a" tracks={tracks} onTrack={onTrack} />
-        <button className="focus-record" onClick={play} disabled={!track} aria-label={isMedia ? (playing ? '일시정지' : '트랙 재생') : '트랙 열기'}>
+        <button className="focus-record" onClick={play} disabled={!track} aria-label={playLabel}>
           <Vinyl image={art} color={album.color} playing={playing} />
         </button>
         <GridPhoto entry={panels[1]} slot="b" tracks={tracks} onTrack={onTrack} />
         <GridPhoto entry={panels[2]} slot="c" tracks={tracks} onTrack={onTrack} />
-      </div>
+      </div>}
+      {plan && <Spread plan={plan} album={album} art={art} playing={playing} onPlay={play} playLabel={playLabel} disabled={!track}
+        tracks={tracks} track={track} onTrack={(entry) => { onTrack(entry); setReveal(false); }} title={albumTitle(album)} />}
       <button className="focus-zoom" onClick={openMoments} disabled={zoom === 'transition'}>
         <Icon name="zoom" size={16} /> LP 확대
       </button>
@@ -139,6 +147,14 @@ function gridPanels(album) {
     if (filler.id !== cover?.id) picks.push(filler);
   }
   return [picks[0], picks[1], cover];
+}
+
+// Photos the layouts may use besides the cover: the album's own photos,
+// topped up with sample travel photos so a layout never runs short.
+function panelPool(album, cover) {
+  const own = album.entries.filter((entry) => entry.kind === 'photo' && entry.id !== cover?.id);
+  const extra = fillerPhotos.filter((filler) => filler.id !== cover?.id);
+  return [...own, ...extra].slice(0, Math.max(3, own.length));
 }
 
 function GridPhoto({ entry, slot, tracks, onTrack }) {

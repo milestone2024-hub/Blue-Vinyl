@@ -17,6 +17,14 @@ export const demos = places.map(([city, country, start, end, color], i) => ({
 }));
 demos[0].entries.unshift({ id: 'jeju-sound', day: demos[0].start, kind: 'audio', fieldRecording: true, name: '파도 소리 · 샘플', src: import.meta.env.BASE_URL + 'art/jeju-waves.wav' });
 demos[3].art = { trackId: 'paris-picnic' };
+// Cover photos for the other sample albums.
+[[0, 'jeju', '유채꽃 길'], [2, 'kyoto', '교토역 플랫폼'], [4, 'bangkok', '비 오는 골목'], [5, 'reykjavik', '오로라'], [6, 'newyork', '파크 로우']]
+  .forEach(([index, file, name]) => {
+    const demo = demos[index];
+    const photoId = file + '-photo';
+    demo.entries.push({ id: photoId, day: demo.start, kind: 'photo', name, src: import.meta.env.BASE_URL + 'art/' + file + '.jpg' });
+    demo.art = { trackId: photoId };
+  });
 demos[3].entries.push(
   { id: 'paris-picnic', day: '2024-09-09', kind: 'photo', name: '샹드마르스 피크닉', src: import.meta.env.BASE_URL + 'art/paris-picnic.jpg' },
   { id: 'paris-window', day: '2024-09-11', kind: 'photo', name: '창밖의 에펠탑', src: import.meta.env.BASE_URL + 'art/paris-window.jpg' },

@@ -16,8 +16,7 @@ export const demos = places.map(([city, country, start, end, color], i) => ({
   }],
 }));
 demos[0].entries.unshift({ id: 'jeju-sound', day: demos[0].start, kind: 'audio', fieldRecording: true, name: '파도 소리 · 샘플', src: import.meta.env.BASE_URL + 'art/jeju-waves.wav' });
-demos[3].entries.unshift({ id: 'paris-photo', day: demos[3].start, kind: 'photo', name: '센 강의 오후 · 샘플', src: import.meta.env.BASE_URL + 'art/paris.jpg' });
-demos[3].art = { trackId: 'paris-photo' };
+demos[3].art = { trackId: 'paris-picnic' };
 demos[3].entries.push(
   { id: 'paris-picnic', day: '2024-09-09', kind: 'photo', name: '샹드마르스 피크닉', src: import.meta.env.BASE_URL + 'art/paris-picnic.jpg' },
   { id: 'paris-window', day: '2024-09-11', kind: 'photo', name: '창밖의 에펠탑', src: import.meta.env.BASE_URL + 'art/paris-window.jpg' },
@@ -27,7 +26,7 @@ demos[3].entries.push(...[
   ['15:18', 'A Walk Through Paris', import.meta.env.BASE_URL + 'art/paris-moment-2.wav'],
   ['19:56', 'After the Blue Hour', import.meta.env.BASE_URL + 'art/paris-moment-3.wav'],
 ].map(([time, name, src], index) => ({
-  id: 'paris-moment-' + index, day: demos[3].start, kind: 'audio', name, time, src, art: { trackId: 'paris-photo' },
+  id: 'paris-moment-' + index, day: demos[3].start, kind: 'audio', name, time, src, art: { trackId: 'paris-picnic' },
 })));
 
 let database;

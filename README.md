@@ -1,6 +1,7 @@
 # Blue Vinyl
 
-Figma의 홈과 여행 기록 흐름을 React로 구현한 모바일 웹앱입니다.
+2026 FALL KAIST ID UXD project web prototype
+Blue Vinyl - Auditory Trace for your own journey
 
 ## 시작하기
 

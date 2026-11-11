@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { MomentMap } from './moment-map';
-import { albumTitle, Icon, Top, useMedia, Vinyl } from './ui';
+import { albumTitle, Arm, Icon, Top, useMedia, Vinyl } from './ui';
 
 export function AlbumPlayer({ album, art, tracks, track, onTrack, back, send, autoStart, save, busy }) {
   const [playing, setPlaying] = useState(false);
@@ -88,17 +88,7 @@ export function AlbumPlayer({ album, art, tracks, track, onTrack, back, send, au
       <button className="focus-record" onClick={play} disabled={!track} aria-label={isMedia ? (playing ? '일시정지' : '트랙 재생') : '트랙 열기'}>
         <Vinyl image={art} color={album.color} playing={playing} />
       </button>
-      <svg className="focus-arm" viewBox="0 0 138 236" aria-hidden="true">
-        <defs><linearGradient id="focus-metal"><stop stopColor="#7d8089"/><stop offset=".55" stopColor="#e7e5de"/><stop offset="1" stopColor="#9d9d9a"/></linearGradient></defs>
-        <circle cx="107" cy="36" r="28" fill="#242831" opacity=".24" transform="translate(2 4)" />
-        <circle cx="107" cy="36" r="28" fill="#edece8" />
-        <circle cx="107" cy="36" r="21" fill="#dfded9" />
-        <path d="M113 39L36 203" stroke="#222531" opacity=".33" strokeWidth="11" transform="translate(3 3)" />
-        <path d="M111 39L36 203" stroke="url(#focus-metal)" strokeWidth="9" strokeLinecap="round" />
-        <rect x="96" y="27" width="25" height="27" rx="5" fill="#d4d3cf" transform="rotate(26 108 40)" />
-        <rect x="18" y="194" width="35" height="14" rx="5" fill="#d8d7d2" transform="rotate(-29 35 201)" />
-        <path d="M31 208l2 7" stroke="#eeece6" strokeWidth="2" strokeLinecap="round" />
-      </svg>
+      <span className="focus-arm"><Arm /></span>
       <button className="focus-zoom" onClick={openMoments} disabled={zoom === 'transition'}>
         <Icon name="zoom" size={16} /> LP 확대
       </button>

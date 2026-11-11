@@ -43,15 +43,52 @@ export function Vinyl({ className = '', color, image, playing }) {
   </div>;
 }
 
-export function Arm() {
-  return <svg className="arm" viewBox="0 0 146 210" aria-hidden="true">
-    <defs><linearGradient id="metal"><stop stopColor="#92949a"/><stop offset=".48" stopColor="#f3f1e9"/><stop offset="1" stopColor="#8e9096"/></linearGradient></defs>
-    <path d="M139 0L53 143l-9 3" fill="none" stroke="#222534" strokeOpacity=".34" strokeWidth="13" transform="translate(4 3)"/>
-    <path d="M139 0L53 143l-9 3" fill="none" stroke="url(#metal)" strokeWidth="10"/>
-    <path d="M38 132l27 16-27 49-29-17z" fill="#76797e"/>
-    <path d="M38 132l27 16-4 6-27-16z" fill="#a4a6a6"/>
-    <path d="M9 180l29 17 3-5-29-17z" fill="#575961"/>
+// MD-style tonearm. viewBox 180x250, pivot at (140,44); drawn in the "over record" pose.
+// ArmBase is the static plinth + arm rest, so the arm can rotate on top of it.
+export function ArmBase({ className = 'arm', rest = true }) {
+  return <svg className={className} viewBox="0 0 180 250" aria-hidden="true">
+    <rect x="109" y="11" width="64" height="70" rx="15" fill="#20263a" opacity=".22" transform="translate(2 4)"/>
+    <rect x="108" y="9" width="64" height="70" rx="15" fill="#f1efe9"/>
+    <rect x="108.5" y="9.5" width="63" height="69" rx="14.5" fill="none" stroke="#fff" strokeOpacity=".9"/>
+    <circle cx="140" cy="44" r="20" fill="#e2e0da"/>
+    <circle cx="140" cy="44" r="20" fill="none" stroke="#cfcdc7" strokeWidth="1"/>
+    {rest && <g>
+      <rect x="135" y="132" width="11" height="24" rx="5.5" fill="#20263a" opacity=".2" transform="translate(2 3)"/>
+      <rect x="135" y="132" width="11" height="24" rx="5.5" fill="#f1efe9"/>
+      <circle cx="140.5" cy="137.5" r="3.4" fill="#d9d7d1"/>
+    </g>}
   </svg>;
+}
+
+export function ArmBody({ className = 'arm' }) {
+  return <svg className={className} viewBox="0 0 180 250" aria-hidden="true">
+    <g transform="rotate(31 140 44)">
+      <g opacity=".2" transform="translate(3 4)" fill="#20263a">
+        <rect x="136.5" y="40" width="7" height="152" rx="3.5"/>
+        <g transform="rotate(28 140 190)"><rect x="132" y="199" width="16" height="27" rx="3"/></g>
+      </g>
+      <rect x="136.5" y="40" width="7" height="152" rx="3.5" fill="#fbfaf7"/>
+      <rect x="140.5" y="42" width="3" height="148" rx="1.5" fill="#dedcd6"/>
+      <g transform="rotate(28 140 190)">
+        <rect x="137" y="186" width="6" height="18" rx="3" fill="#fbfaf7"/>
+        <rect x="132" y="199" width="16" height="27" rx="3" fill="#f6f5f1"/>
+        <rect x="132" y="199" width="16" height="27" rx="3" fill="none" stroke="#d6d4ce"/>
+        <path d="M148 205h7" stroke="#f6f5f1" strokeWidth="3" strokeLinecap="round"/>
+        <rect x="136" y="225" width="8" height="5" rx="1.5" fill="#9a9a9e"/>
+      </g>
+    </g>
+    <circle cx="140" cy="44" r="12.5" fill="#20263a" opacity=".18" transform="translate(1.5 2.5)"/>
+    <circle cx="140" cy="44" r="12.5" fill="#fbfaf7"/>
+    <circle cx="140" cy="44" r="12.5" fill="none" stroke="#d6d4ce"/>
+    <circle cx="140" cy="44" r="4.5" fill="#e0ded8"/>
+  </svg>;
+}
+
+export function Arm() {
+  return <span className="arm arm-set">
+    <ArmBase className="arm-layer" rest={false} />
+    <ArmBody className="arm-layer" />
+  </span>;
 }
 
 export function useMedia(entry) {

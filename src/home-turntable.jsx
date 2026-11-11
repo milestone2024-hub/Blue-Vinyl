@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { albumArt } from './archive';
-import { albumTitle, Arm, useMedia, Vinyl } from './ui';
+import { albumTitle, ArmBase, ArmBody, useMedia, Vinyl } from './ui';
 
 const parked = -25;
 const overRecord = 0;
@@ -94,6 +94,7 @@ export function HomeTurntable({ album, open, children }) {
     <button className="latest-disc" onClick={open} aria-label={'최근 LP · ' + title}>
       <Vinyl color="#d9d9d7" image={art} playing={playing} />
     </button>
+    <ArmBase className="home-arm-base" />
     <button className={'home-arm' + (dragAngle !== null ? ' dragging' : '')}
       style={{ '--arm-angle': angle + 'deg' }}
       aria-label="톤암 · LP 재생 또는 정지" aria-pressed={playing}
@@ -103,7 +104,7 @@ export function HomeTurntable({ album, open, children }) {
       onClick={(event) => {
         if (event.detail === 0) { if (wantsPlayback.current) stopPlayback(); else startPlayback(); }
       }}>
-      <Arm />
+      <ArmBody />
     </button>
     <div className="turntable-label">
       <strong>{title}</strong>

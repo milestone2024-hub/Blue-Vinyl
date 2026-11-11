@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { addDelivery, albumArt, albumFile, deliverySchedule, demos, importAlbum, loadAlbums, loadInbox, localDay, localTime, resolveDelivery, saveAlbum, trackArt } from './archive';
+import { addDelivery, albumArt, albumFile, deliverySchedule, demos, importAlbum, loadAlbums, loadInbox, localDay, localTime, resolveDelivery, saveAlbum, strangerDelivery, trackArt } from './archive';
 import { AlbumPlayer } from './album-player';
 import { ArtPicker } from './art-picker';
 import { BlankRecord, TripDetails } from './trip-details';
@@ -9,6 +9,7 @@ import { JourneyConfirm, PressCompleted, PressRecord } from './press-record';
 import { ReturnMail, ShippingScreen } from './shipping';
 import { SongForm, TripMoment } from './trip-moment';
 import { Inbox } from './inbox';
+import { AirmailArrival } from './airmail';
 import { Arm, Icon, Plane, PullSleeve, SleeveFace, Top, Vinyl, albumTitle, dateLabel, entryIcons, useMedia } from './ui';
 import { Recorder, TrackMedia } from './recorder';
 import { TravelMap } from './map';
@@ -37,6 +38,9 @@ function App() {
   const [inbox, setInbox] = useState([]);
   const [inboxIndex, setInboxIndex] = useState(0);
   const [previewDelivery, setPreviewDelivery] = useState(null);
+  const [airmail, setAirmail] = useState(null);
+  const airmailCount = useRef(0);
+  const airmailFrom = useRef([]);
   const [shareLink, setShareLink] = useState('');
   const [reviewDay, setReviewDay] = useState(localDay);
   const [today, setToday] = useState(localDay);
@@ -102,6 +106,22 @@ function App() {
     return () => { active = false; window.removeEventListener('hashchange', receiveLink); };
   }, [loaded]);
   useEffect(() => { main.current?.scrollTo(0, 0); }, [page]);
+  // Now and then, while the user is on the home screen, a stranger's LP arrives by paper plane.
+  useEffect(() => {
+    if (!loaded || page !== 'home' || sheet || airmail) return;
+    const now = window.location.hash === '#plane';
+    const wait = now ? 400 : airmailCount.current === 0 ? 6000 + Math.random() * 6000 : 45000 + Math.random() * 45000;
+    const timer = setTimeout(async () => {
+      if (now) history.replaceState(null, '', window.location.pathname + window.location.search);
+      const delivery = strangerDelivery(airmailFrom.current);
+      airmailFrom.current.push(delivery.album.from.name);
+      airmailCount.current += 1;
+      try { await addDelivery(delivery); } catch { /* keep it in memory if storage is unavailable */ }
+      setInbox((items) => [delivery, ...items]);
+      setAirmail(delivery);
+    }, wait);
+    return () => clearTimeout(timer);
+  }, [loaded, page, sheet, airmail]);
   useEffect(() => {
     let timer;
     function syncToday() {
@@ -516,6 +536,11 @@ function App() {
       {sheet === 'inbox' && inbox.length > 0 && <Inbox items={inbox} index={inboxIndex} onIndex={setInboxIndex} close={() => setSheet('')}
         play={playDelivery} save={(delivery) => finishDelivery(delivery, true)}
         discard={(delivery) => finishDelivery(delivery, false)} busy={busy} notice={notice} />}
+      {airmail && <AirmailArrival key={airmail.id} delivery={airmail} busy={busy}
+        play={(delivery) => { setAirmail(null); playDelivery(delivery); }}
+        save={async (delivery) => { await finishDelivery(delivery, true); setAirmail(null); }}
+        release={async (delivery) => { await finishDelivery(delivery, false); setAirmail(null); }}
+        later={() => setAirmail(null)} />}
       {sheet === 'finish-journey' && <JourneyConfirm confirm={confirmJourney} close={() => setSheet('')} />}
       {sheet && sheet !== 'inbox' && sheet !== 'finish-journey' && <Sheet key={sheet} close={() => setSheet('')} title={{
         add: '트랙 추가', song: '들은 노래 기록', memo: editId ? '메모 편집' : '여행 메모',

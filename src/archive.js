@@ -29,6 +29,39 @@ demos[3].entries.push(...[
   id: 'paris-moment-' + index, day: demos[3].start, kind: 'audio', name, time, src, art: { trackId: 'paris-picnic' },
 })));
 
+// Letters from strangers: LPs someone made in a place and set adrift as a paper plane.
+const strangers = [
+  { city: 'Lisbon', country: 'Portugal', start: '2025-10-18', color: '#a88f78', from: 'Inês', title: 'Fado from Alfama',
+    note: '알파마 언덕, 빨래 사이로 흘러나오던 파두 한 소절을 담았어요. 언젠가 이 골목을 걷게 되길.',
+    photo: 'sky-wing.jpg', audio: 'paris-moment-2.wav' },
+  { city: 'Jeju', country: 'Korea', start: '2025-08-02', color: '#7f958c', from: '수아', title: '숨비소리',
+    note: '물질을 마친 해녀 할머니들이 내쉬던 숨소리예요. 바다가 당신 쪽으로도 불어가길.',
+    photo: 'boarding-bridge.jpg', audio: 'jeju-waves.wav' },
+  { city: 'Paris', country: 'France', start: '2025-05-21', color: '#8a8fa8', from: 'Camille', title: 'Pont des Arts, 7pm',
+    note: '센 강 다리 위에서 이 비행기를 접었어요. 바람이 당신에게 데려다주기를.',
+    photo: 'carry-on.jpg', audio: 'paris-moment-3.wav' },
+];
+
+export function strangerDelivery(exclude = []) {
+  const pool = strangers.filter((item) => !exclude.includes(item.from));
+  const pick = (pool.length ? pool : strangers)[Math.floor(Math.random() * (pool.length || strangers.length))];
+  const id = 'stranger-' + crypto.randomUUID();
+  const base = import.meta.env.BASE_URL + 'art/';
+  const photoId = id + '-photo';
+  return {
+    id: crypto.randomUUID(), receivedAt: Date.now(), airmail: true,
+    album: {
+      id, city: pick.city, country: pick.country, start: pick.start, end: pick.start, color: pick.color, phase: 'pressed',
+      from: { name: pick.from, note: pick.note }, art: { trackId: photoId },
+      entries: [
+        { id: photoId, day: pick.start, kind: 'photo', name: pick.from + '의 장면', src: base + pick.photo },
+        { id: id + '-memo', day: pick.start, kind: 'memo', name: pick.from + '의 메모', note: pick.note },
+        { id: id + '-audio', day: pick.start, kind: 'audio', name: pick.title, src: base + pick.audio, art: { trackId: photoId } },
+      ],
+    },
+  };
+}
+
 let database;
 function openArchive() {
   if (!database) database = new Promise((resolve, reject) => {

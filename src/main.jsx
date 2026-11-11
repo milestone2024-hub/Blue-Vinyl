@@ -472,7 +472,7 @@ function App() {
             onFile={(event) => attach(event, true)} />
         </>}
 
-        {page === 'play' && album && <AlbumPlayer key={album.id} album={album} art={track ? chosenArt : cover}
+        {page === 'play' && album && <AlbumPlayer key={album.id} album={album} art={(track && chosenArt) || cover}
           tracks={tracks} track={track} onTrack={playTrack} back={returnFromPlayer} busy={busy} autoStart={Boolean(previewDelivery)}
           send={previewDelivery ? undefined : () => { setNotice(''); go('send-lp'); }}
           save={previewDelivery ? () => finishDelivery(previewDelivery, true) : undefined} />}

@@ -16,6 +16,8 @@ export function HomeTurntable({ album, open, children }) {
   const audio = useRef(null);
   const wantsPlayback = useRef(false);
   const pointer = useRef(null);
+  const stage = useRef(null);
+  const tilt = useTilt(stage, dragAngle !== null);
   const track = tracks[trackIndex];
   const source = useMedia(track);
   const art = useMedia(albumArt(album));
@@ -90,10 +92,15 @@ export function HomeTurntable({ album, open, children }) {
     else stopPlayback();
   }
 
-  return <section className="turntable" aria-label="Blue Vinyl">
+  return <section className="turntable" aria-label="Blue Vinyl" ref={stage} {...tilt}>
+    <div className="tt-stage">
+    <div className="tt-layer tt-disc">
     <button className="latest-disc" onClick={open} aria-label={'최근 LP · ' + title}>
       <Vinyl color="#d9d9d7" image={art} playing={playing} />
+      <span className="disc-sheen" aria-hidden="true" />
     </button>
+    </div>
+    <div className="tt-layer tt-arm">
     <ArmBase className="home-arm-base" />
     <button className={'home-arm' + (dragAngle !== null ? ' dragging' : '')}
       style={{ '--arm-angle': angle + 'deg' }}
@@ -106,6 +113,8 @@ export function HomeTurntable({ album, open, children }) {
       }}>
       <ArmBody />
     </button>
+    </div>
+    </div>
     <div className="turntable-label">
       <strong>{title}</strong>
       {(notice || playing) && <small role="status">{notice || track.name}</small>}
@@ -116,4 +125,61 @@ export function HomeTurntable({ album, open, children }) {
       onError={() => { if (wantsPlayback.current) { stopPlayback(); setNotice('이 LP의 오디오를 열 수 없어요.'); } }} />}
     {children}
   </section>;
+}
+
+// Top-down 3D tilt: the deck leans toward the pointer (or the phone's tilt),
+// layers sit at different heights for parallax, and the sheen/shadows follow.
+function useTilt(ref, frozen) {
+  const target = useRef({ x: 0, y: 0, active: false });
+  const frozenRef = useRef(frozen);
+  frozenRef.current = frozen;
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const still = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    const cur = { x: 0, y: 0 };
+    let frame = 0;
+    let last = performance.now();
+    const tick = (now) => {
+      const t = target.current;
+      let gx = t.x, gy = t.y;
+      if (!t.active && !still) {
+        const s = now / 1000;
+        gx = Math.sin(s * 0.55) * 0.32;
+        gy = Math.cos(s * 0.42) * 0.26;
+      }
+      if (frozenRef.current) { gx = cur.x; gy = cur.y; }
+      const k = 1 - Math.pow(0.0025, (now - last) / 1000);
+      last = now;
+      cur.x += (gx - cur.x) * k;
+      cur.y += (gy - cur.y) * k;
+      el.style.setProperty('--tx', cur.x.toFixed(4));
+      el.style.setProperty('--ty', cur.y.toFixed(4));
+      frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+
+    const orient = (event) => {
+      if (event.beta == null || event.gamma == null) return;
+      const clamp = (v) => Math.max(-1, Math.min(1, v));
+      target.current = { x: clamp(event.gamma / 25), y: clamp((event.beta - 40) / 25), active: true };
+    };
+    window.addEventListener('deviceorientation', orient);
+    return () => { cancelAnimationFrame(frame); window.removeEventListener('deviceorientation', orient); };
+  }, [ref]);
+
+  function move(event) {
+    if (event.pointerType === 'touch' && event.buttons === 0) return;
+    const box = ref.current.getBoundingClientRect();
+    const clamp = (v) => Math.max(-1, Math.min(1, v));
+    target.current = {
+      x: clamp(((event.clientX - box.left) / box.width) * 2 - 1),
+      y: clamp(((event.clientY - box.top) / box.height) * 2 - 1),
+      active: true,
+    };
+  }
+  function leave() { target.current = { x: 0, y: 0, active: false }; }
+
+  return { onPointerMove: move, onPointerDown: move, onPointerLeave: leave, onPointerCancel: leave };
 }

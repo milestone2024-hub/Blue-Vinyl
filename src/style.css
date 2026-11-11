@@ -160,10 +160,20 @@ p,h1,h2,blockquote{margin:0}
 .focus-media .media-photo{margin-top:6px}
 .focus-media .memo-view{padding:8px 5px}
 .home{background:linear-gradient(180deg,#535d81 0%,#535d81 66%,#454e70 100%)}
-.turntable{height:clamp(295px,64.2dvh,555px);position:relative;overflow:hidden}
+.turntable{height:clamp(295px,64.2dvh,555px);position:relative;overflow:hidden;--tx:0;--ty:0;perspective:1100px;perspective-origin:60% 30%}
+.tt-stage{position:absolute;inset:0;transform-style:preserve-3d;transform:rotateX(calc(var(--ty) * -8deg)) rotateY(calc(var(--tx) * 8deg))}
+.tt-layer{position:absolute;inset:0;transform-style:preserve-3d;pointer-events:none}
+.tt-layer>*{pointer-events:auto}
+.tt-disc{transform:translateZ(0)}
+.tt-disc .latest-disc{overflow:visible}
+.tt-arm{transform:translateZ(46px) scale(.96);transform-origin:80% 10%;filter:drop-shadow(calc(5px - var(--tx) * 9px) calc(10px - var(--ty) * 9px) 5px #10162a52)}
+.tt-arm .home-arm-base{pointer-events:none}
+.disc-sheen{position:absolute;z-index:2;top:calc(var(--app-width) * -.43);left:-51%;width:140%;aspect-ratio:1;border-radius:50%;pointer-events:none;
+  background:conic-gradient(from calc(-35deg + var(--tx) * 50deg + var(--ty) * 25deg),#fff0 0deg,#ffffff2a 22deg,#fff0 52deg,#fff0 160deg,#ffffff20 195deg,#fff0 230deg,#fff0 360deg);
+  -webkit-mask:radial-gradient(circle,#0000 17.4%,#000 17.8%,#000 69%,#0000 70.5%);mask:radial-gradient(circle,#0000 17.4%,#000 17.8%,#000 69%,#0000 70.5%);mix-blend-mode:screen}
 .latest-disc{position:absolute;z-index:1;top:0;left:0;width:100%;height:100%;padding:0;border:0;background:transparent;overflow:hidden;text-align:left;clip-path:circle(calc(var(--app-width)*.7) at 19% calc(var(--app-width)*.27))}
 .latest-disc:focus-visible .vinyl-label{outline:3px solid #fff;outline-offset:6px}
-.latest-disc .vinyl{position:absolute;top:calc(var(--app-width) * -.43);left:-51%;width:140%;box-shadow:8px 14px 28px #1319253b}
+.latest-disc .vinyl{position:absolute;top:calc(var(--app-width) * -.43);left:-51%;width:140%;box-shadow:inset 0 0 0 2px #ffffff08,calc(8px - var(--tx) * 16px) calc(14px - var(--ty) * 16px) 28px #1319254d,calc(2px - var(--tx) * 4px) calc(4px - var(--ty) * 4px) 0 #0d0f17}
 .latest-disc .vinyl.rotating{animation-duration:1.8s}
 .home-arm-base,.home-arm{position:absolute;z-index:2;right:1.5%;top:4px;width:48%;aspect-ratio:180/250}
 .home-arm-base{pointer-events:none;height:auto}

@@ -32,6 +32,8 @@ function App() {
   const [reviewFrom, setReviewFrom] = useState('trip');
   const [pressFrom, setPressFrom] = useState('review');
   const [preview, setPreview] = useState('');
+  const [dig, setDig] = useState(-1);
+  const digTimer = useRef(0);
   const [inbox, setInbox] = useState([]);
   const [inboxIndex, setInboxIndex] = useState(0);
   const [previewDelivery, setPreviewDelivery] = useState(null);
@@ -414,11 +416,31 @@ function App() {
               <Plane />
             </button>}
           </HomeTurntable>
-          <section className="shelf" aria-label="LP 리스트">
-            <button className="empty-sleeve" disabled={!loaded} onClick={() => { setForm(newTrip()); setEditingDetails(false); go('blank'); }}>
-              <span className="spine">+ Add New Album</span><span className="empty-face"><Icon name="plus" size={25} /></span>
-            </button>
-            {shelfAlbums.map((item, index) => <div className="shelf-item" key={item.id}>
+          <section className={'shelf' + (dig >= 0 && !preview ? ' digging' : '')} aria-label="LP 리스트"
+            onPointerMove={(event) => {
+              if (event.pointerType === 'touch') return;
+              const item = event.target.closest?.('.shelf-item');
+              if (item) setDig(Number(item.dataset.index));
+            }}
+            onPointerDown={(event) => {
+              clearTimeout(digTimer.current);
+              const item = event.target.closest?.('.shelf-item');
+              if (item) setDig(Number(item.dataset.index));
+            }}
+            onPointerUp={(event) => {
+              if (event.pointerType !== 'touch') return;
+              clearTimeout(digTimer.current);
+              digTimer.current = setTimeout(() => setDig(-1), 900);
+            }}
+            onPointerCancel={() => { clearTimeout(digTimer.current); digTimer.current = setTimeout(() => setDig(-1), 900); }}
+            onPointerLeave={(event) => { if (event.pointerType !== 'touch') setDig(-1); }}>
+            <div className={'shelf-item' + crateState(0, preview ? -1 : dig)} data-index="0">
+              <button className="empty-sleeve" disabled={!loaded} onClick={() => { setForm(newTrip()); setEditingDetails(false); go('blank'); }}>
+                <span className="spine">+ Add New Album</span><span className="empty-face"><Icon name="plus" size={25} /></span>
+              </button>
+            </div>
+            {shelfAlbums.map((item, index) => <div className={'shelf-item' + crateState(index + 1, preview ? -1 : dig) + (preview === item.id ? ' lifted' : '')}
+              key={item.id} data-index={index + 1}>
               <button className={'sleeve sleeve-' + index % 3} aria-expanded={preview === item.id}
                 onClick={() => setPreview(preview === item.id ? '' : item.id)}>
                 <span className="spine"><strong>{albumTitle(item)}</strong><span>{dateLabel(item.start)}</span>{item.phase === 'trip' && <i />}</span>
@@ -426,6 +448,7 @@ function App() {
               </button>
               {preview === item.id && <PullSleeve album={item} open={() => openAlbum(item)} />}
             </div>)}
+            <span className="crate-lip" aria-hidden="true" />
           </section>
           <div className="home-foot"><span>BLUE VINYL · 33⅓ RPM</span><button onClick={() => go('map')}><Icon name="pin" size={13} /> 여행 지도</button></div>
         </>}
@@ -565,3 +588,11 @@ function TrackList({ entries, current, onSelect, hideEmpty }) {
 }
 
 createRoot(document.getElementById('root')).render(<App />);
+
+// Crate digging: the record under the pointer leans back to show its face,
+// records in front of it tip forward toward the viewer, the ones behind stay put.
+function crateState(index, dig) {
+  if (dig < 0) return '';
+  if (index === dig) return ' dig';
+  return index > dig ? ' front' : ' behind';
+}

@@ -9,7 +9,7 @@ import { JourneyConfirm, PressCompleted, PressRecord } from './press-record';
 import { ReturnMail, ShippingScreen } from './shipping';
 import { SongForm, TripMoment } from './trip-moment';
 import { Inbox } from './inbox';
-import { AirmailArrival } from './airmail';
+import { AirmailArrival, PaperPlane } from './airmail';
 import { Arm, Icon, Plane, PullSleeve, SleeveFace, Top, Vinyl, albumTitle, dateLabel, entryIcons, useMedia } from './ui';
 import { Recorder, TrackMedia } from './recorder';
 import { TravelMap } from './map';
@@ -433,7 +433,7 @@ function App() {
           <HomeTurntable key={latest.id} album={latest} open={() => openAlbum(latest)}>
             {inbox.length > 0 && <button className="plane-button" onClick={() => { setInboxIndex(0); setSheet('inbox'); }}
               aria-label="종이비행기 · 받은 LP">
-              <Plane />
+              <PaperPlane className="pp-idle" />
             </button>}
           </HomeTurntable>
           <section className={'shelf' + (dig >= 0 && !preview ? ' digging' : '')} aria-label="LP 리스트"

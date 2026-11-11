@@ -1,10 +1,11 @@
-import React, { useEffect, useId, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { albumTitle, Cover, Vinyl } from './ui';
 
-// An antique paper plane drifts in, lands, unfolds into a crumpled letter,
-// and a stranger's LP rises out of the paper.
-// Phases: fly -> unfold -> reveal -> ready. Tapping skips ahead.
-const timings = { fly: 2300, unfold: 1500, reveal: 1100 };
+// An antique paper plane drifts in, lands and opens flat, the folded letter
+// unfolds panel by panel like a real sheet, and a stranger's LP rises from it.
+// Phases: fly -> land -> unfold -> reveal -> ready. Tapping skips ahead.
+const timings = { fly: 2600, land: 750, unfold: 1900, reveal: 1100 };
+const order = { fly: 'land', land: 'unfold', unfold: 'reveal', reveal: 'ready' };
 
 export function AirmailArrival({ delivery, play, save, release, later, busy }) {
   const [phase, setPhase] = useState('fly');
@@ -14,9 +15,8 @@ export function AirmailArrival({ delivery, play, save, release, later, busy }) {
 
   useEffect(() => {
     if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) { setPhase('ready'); return; }
-    const next = { fly: 'unfold', unfold: 'reveal', reveal: 'ready' }[phase];
-    if (!next) return;
-    timer.current = setTimeout(() => setPhase(next), timings[phase]);
+    if (!order[phase]) return;
+    timer.current = setTimeout(() => setPhase(order[phase]), timings[phase]);
     return () => clearTimeout(timer.current);
   }, [phase]);
 
@@ -26,12 +26,13 @@ export function AirmailArrival({ delivery, play, save, release, later, busy }) {
     setPhase('ready');
   }
 
+  const flying = phase === 'fly' || phase === 'land';
   return <div className={'airmail airmail-' + phase} role="dialog" aria-modal="true" aria-label={'종이비행기로 날아온 LP · ' + albumTitle(album)}
-    onClick={(event) => { if (event.target === event.currentTarget) skip(); }}>
-    {phase === 'fly' && <div className="airmail-flight" onClick={skip}><AntiquePlane /></div>}
+    onClick={skip}>
+    {flying && <div className="airmail-flight"><PaperPlane /></div>}
 
-    {phase !== 'fly' && <div className="airmail-letter" onClick={skip}>
-      <div className="airmail-paper" aria-hidden="true"><span className="airmail-creases" /></div>
+    {!flying && <div className="airmail-letter">
+      <FoldingSheet />
       <div className="airmail-body">
         <header>
           <span className="airmail-label">PAR AVION</span>
@@ -46,7 +47,7 @@ export function AirmailArrival({ delivery, play, save, release, later, busy }) {
       </div>
     </div>}
 
-    {phase === 'ready' && <div className="airmail-actions">
+    {phase === 'ready' && <div className="airmail-actions" onClick={(event) => event.stopPropagation()}>
       <button type="button" className="airmail-play" disabled={busy} onClick={() => play(delivery)}>들어보기</button>
       <div>
         <button type="button" disabled={busy} onClick={() => save(delivery)}>선반에 꽂기</button>
@@ -57,31 +58,30 @@ export function AirmailArrival({ delivery, play, save, release, later, busy }) {
   </div>;
 }
 
-export function AntiquePlane() {
-  const id = useId().replace(/:/g, '');
-  return <svg className="antique-plane" viewBox="0 0 220 130" aria-hidden="true">
-    <defs>
-      <filter id={id + 'age'} x="-10%" y="-10%" width="120%" height="120%">
-        <feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" seed="4" result="grain" />
-        <feColorMatrix in="grain" type="matrix" values="0 0 0 0 .42  0 0 0 0 .32  0 0 0 0 .2  0 0 0 .32 0" result="tint" />
-        <feComposite in="tint" in2="SourceGraphic" operator="in" result="speckle" />
-        <feMerge><feMergeNode in="SourceGraphic" /><feMergeNode in="speckle" /></feMerge>
-      </filter>
-      <linearGradient id={id + 'wing'} x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0" stopColor="#f1e6cd" /><stop offset="1" stopColor="#dccaa3" />
-      </linearGradient>
-    </defs>
-    <g filter={'url(#' + id + 'age)'}>
-      <path d="M8 58L212 12 96 78z" fill={'url(#' + id + 'wing)'} />
-      <path d="M96 78L212 12 120 116z" fill="#cdb98f" />
-      <path d="M96 78L212 12 104 70z" fill="#b9a275" />
-      <path d="M8 58L104 70 212 12z" fill="#e8dbbd" />
-      <path d="M8 58L212 12" stroke="#a48c62" strokeWidth=".8" opacity=".6" />
-      <path d="M40 54l52 7M52 50l60 6M66 46l60 5" stroke="#6d5b45" strokeWidth=".7" opacity=".28" strokeLinecap="round" />
-      <circle cx="150" cy="34" r="9" fill="none" stroke="#8a4b3a" strokeWidth="1.1" opacity=".45" />
-      <path d="M126 92l8-4 6 9-7 4z" fill="#8a4b3a" opacity=".22" />
-      <circle cx="70" cy="62" r="2.2" fill="#a7865a" opacity=".22" />
-      <circle cx="180" cy="22" r="1.6" fill="#a7865a" opacity=".25" />
-    </g>
-  </svg>;
+// A dart paper plane built from real 3D faces: two wings and two keel flaps
+// hinged on the centre crease, lit differently so it reads as folded paper.
+export function PaperPlane({ className = '' }) {
+  return <div className={'pp ' + className} aria-hidden="true">
+    <div className="pp-shadow" />
+    <div className="pp-orient">
+      <div className="pp-body">
+        <i className="pp-face pp-keel pp-keel-near" />
+        <i className="pp-face pp-keel pp-keel-far" />
+        <i className="pp-face pp-wing pp-wing-far" />
+        <i className="pp-face pp-wing pp-wing-near" />
+      </div>
+    </div>
+  </div>;
+}
+
+// A sheet folded in quarters (bottom up, then right over left) that unfolds
+// on its creases. Each quarter has an inner (writing) side and an outer side.
+function FoldingSheet() {
+  const quarter = (name) => <div className={'fold-q fold-' + name}>
+    <i className="fold-face fold-in" /><i className="fold-face fold-out" /><i className="fold-shade" />
+  </div>;
+  return <div className="fold-sheet" aria-hidden="true">
+    <div className="fold-half fold-top">{quarter('tl')}{quarter('tr')}</div>
+    <div className="fold-half fold-bottom">{quarter('bl')}{quarter('br')}</div>
+  </div>;
 }

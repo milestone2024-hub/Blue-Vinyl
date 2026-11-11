@@ -59,7 +59,12 @@ export function planSpread(cover, photos) {
   };
 
   const placed = [];
+  // The LP sleeve always sits in the top-right corner.
+  const sleeve = items.find((item) => item.kind === 'sleeve');
+  take(0, 1, 2, 1);
+  placed.push({ ...sleeve, row: 0, col: 1, w: 2, h: 1 });
   for (const item of items) {
+    if (item === sleeve) continue;
     let [w, h] = spans[item.size];
     let spot = findSpot(fits, w, h);
     if (!spot && h > 1) { h = 1; spot = findSpot(fits, w, h); }

@@ -131,6 +131,11 @@ button.spread-photo:hover img{filter:brightness(1.08)}
 .spread-list button.current{font-weight:700;text-decoration:underline;text-underline-offset:2px}
 .spread-blank{background:#46507233}
 .focus-stage:has(.spread){overflow:auto}
+.focus-stage.record-view{display:block;padding:0;overflow:hidden}
+.focus-record.focus-big{width:126%;position:absolute;left:-38%;top:50%;transform:translateY(-50%)}
+.focus-arm{width:52%;position:absolute;z-index:2;right:1%;top:50%;transform:translateY(-66%);pointer-events:none}
+.focus-arm .arm{position:relative;right:auto;top:auto;width:100%;--arm-swing:-8deg;transition:--arm-swing .4s}
+.focus-stage:has(.vinyl.rotating) .focus-arm .arm{--arm-swing:-2deg}
 .focus-record{width:100%;border:0;border-radius:50%;background:none;padding:0;position:relative;text-align:center}
 .focus-record:disabled{opacity:1}
 .focus-record .vinyl{background:repeating-radial-gradient(circle at center,#303034 0px,#303034 2px,#343438 3px,#303034 4px);box-shadow:inset 0 0 0 1px #fff0,0 9px 35px #161b2a29}
@@ -140,6 +145,8 @@ button.spread-photo:hover img{filter:brightness(1.08)}
 .focus-zoom{position:absolute;z-index:3;right:16px;bottom:6px;display:flex;align-items:center;gap:6px;min-height:42px;padding:5px 10px;border:1px solid #ffffff3d;border-radius:24px;background:#262e4990;color:#f2f0eb;font-size:11px}
 .focus-zoom:hover{background:#242c46}
 .focus-zooming .focus-record{animation:focus-into-record .29s ease-in both}
+.focus-zooming .focus-big{animation-name:focus-into-big}
+.focus-zooming .focus-arm{animation:focus-fade .24s ease both}
 .focus-zooming .focus-photo,.focus-zooming .spread-photo,.focus-zooming .spread-list,.focus-zooming .focus-bottom,.focus-zooming .focus-zoom{animation:focus-fade .24s ease both}
 .moment-map{min-height:100%;display:flex;flex-direction:column;position:relative;overflow:hidden;padding-bottom:max(18px,env(safe-area-inset-bottom))}
 .moment-heading{text-align:center;padding:4px 15px 0}
@@ -433,6 +440,7 @@ button.shipping-location{min-height:30px;border:0;background:none;text-decoratio
 @keyframes shipping-in{from{opacity:0}to{opacity:1}}
 @keyframes unfold{from{opacity:.1;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
 @keyframes focus-into-record{to{transform:scale(1.35)}}
+@keyframes focus-into-big{to{transform:translate(9%,-50%) scale(1.52)}}
 @keyframes focus-fade{to{opacity:0}}
 @keyframes moment-laydown{from{opacity:.45;transform:translateY(-18%) scale(1.1,1.75)}to{opacity:1;transform:translateY(0) scale(1)}}
 @keyframes pin-arrival{from{opacity:0;transform:translate(-50%,-66%)}to{opacity:1;transform:translate(-50%,-90%)}}

@@ -2,13 +2,14 @@ import React, { useEffect, useRef, useState } from 'react';
 import { albumArt, fillerPhotos } from './archive';
 import { chooseLayout, planSpread, Spread, useMeasuredPhotos } from './collage';
 import { MomentMap } from './moment-map';
-import { albumTitle, Icon, Top, useMedia, Vinyl } from './ui';
+import { albumTitle, Arm, Icon, Top, useMedia, Vinyl } from './ui';
 
 export function AlbumPlayer({ album, art, tracks, track, onTrack, back, send, autoStart, save, busy }) {
   const [playing, setPlaying] = useState(false);
   const [reveal, setReveal] = useState(false);
   const [error, setError] = useState('');
   const [zoom, setZoom] = useState('record');
+  const [view, setView] = useState('collage');
   const player = useRef(null);
   const lastAuto = useRef('');
   const startDistance = useRef(0);
@@ -38,6 +39,11 @@ export function AlbumPlayer({ album, art, tracks, track, onTrack, back, send, au
       try { await media.play(); }
       catch { setError('이 트랙을 재생할 수 없어요.'); }
     }
+  }
+
+  function openRecord() {
+    setView('record');
+    if (track?.kind === 'audio' && player.current?.paused) player.current.play().catch(() => setError('이 트랙을 재생할 수 없어요.'));
   }
 
   function move(direction) {
@@ -82,8 +88,8 @@ export function AlbumPlayer({ album, art, tracks, track, onTrack, back, send, au
   if (zoom === 'moments') return <MomentMap album={album} tracks={tracks} back={() => setZoom('record')} />;
 
   return <div className={'album-focus' + (zoom === 'transition' ? ' focus-zooming' : '')}>
-    <Top title={autoStart ? 'RECEIVED RECORD' : 'BLUE VINYL'} back={back} action={send} actionIcon="plane" actionLabel="여행지로 LP 보내기" />
-    <div className="focus-stage zoom-gesture"
+    <Top title={autoStart ? 'RECEIVED RECORD' : 'BLUE VINYL'} back={view === 'record' ? () => setView('collage') : back} action={send} actionIcon="plane" actionLabel="여행지로 LP 보내기" />
+    <div className={'focus-stage zoom-gesture' + (view === 'record' ? ' record-view' : '')}
       onTouchStart={(event) => { startDistance.current = pinchDistance(event.touches); }}
       onTouchMove={(event) => {
         if (startDistance.current && pinchDistance(event.touches) > startDistance.current * 1.22) {
@@ -93,15 +99,21 @@ export function AlbumPlayer({ album, art, tracks, track, onTrack, back, send, au
       }}
       onTouchEnd={() => { startDistance.current = 0; }}
       onTouchCancel={() => { startDistance.current = 0; }}>
-      {layout === 'grid' && <div className="focus-grid">
+      {view === 'record' && <>
+        <button className="focus-record focus-big" onClick={play} disabled={!track} aria-label={playLabel}>
+          <Vinyl image={art} color={album.color} playing={playing} />
+        </button>
+        <span className="focus-arm"><Arm /></span>
+      </>}
+      {view === 'collage' && layout === 'grid' && <div className="focus-grid">
         <GridPhoto entry={panels[0]} slot="a" tracks={tracks} onTrack={onTrack} />
-        <button className="focus-record" onClick={play} disabled={!track} aria-label={playLabel}>
+        <button className="focus-record" onClick={openRecord} disabled={!track} aria-label="LP 크게 보기">
           <Vinyl image={art} color={album.color} playing={playing} />
         </button>
         <GridPhoto entry={panels[1]} slot="b" tracks={tracks} onTrack={onTrack} />
         <GridPhoto entry={panels[2]} slot="c" tracks={tracks} onTrack={onTrack} />
       </div>}
-      {plan && <Spread plan={plan} album={album} art={art} playing={playing} onPlay={play} playLabel={playLabel} disabled={!track}
+      {view === 'collage' && plan && <Spread plan={plan} album={album} art={art} playing={playing} onPlay={openRecord} playLabel="LP 크게 보기" disabled={!track}
         tracks={tracks} track={track} onTrack={(entry) => { onTrack(entry); setReveal(false); }} title={albumTitle(album)} />}
       <button className="focus-zoom" onClick={openMoments} disabled={zoom === 'transition'}>
         <Icon name="zoom" size={16} /> LP 확대

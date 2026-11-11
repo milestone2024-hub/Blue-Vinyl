@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { albumArt, fillerPhotos } from './archive';
 import { chooseLayout, planSpread, Spread, useMeasuredPhotos } from './collage';
 import { MomentMap } from './moment-map';
+import { useTone } from './palette';
 import { albumTitle, Arm, Icon, Top, useMedia, Vinyl } from './ui';
 
 export function AlbumPlayer({ album, art, tracks, track, onTrack, back, send, autoStart, save, busy }) {
@@ -78,6 +79,7 @@ export function AlbumPlayer({ album, art, tracks, track, onTrack, back, send, au
     onError: () => setError('이 트랙을 열 수 없어요.'),
   };
   const showVideo = track?.kind === 'video' && (reveal || playing);
+  const tone = useTone(art, album.color);
   const panels = gridPanels(album);
   const measured = useMeasuredPhotos([panels[2], ...panelPool(album, panels[2])]);
   const layout = measured.length ? chooseLayout(measured) : 'pending';
@@ -88,7 +90,7 @@ export function AlbumPlayer({ album, art, tracks, track, onTrack, back, send, au
 
   if (zoom === 'moments') return <MomentMap album={album} tracks={tracks} back={() => setZoom('record')} />;
 
-  return <div className={'album-focus' + (zoom === 'transition' ? ' focus-zooming' : '')}>
+  return <div className={'album-focus toned' + (zoom === 'transition' ? ' focus-zooming' : '')} style={tone}>
     <Top title={autoStart ? 'RECEIVED RECORD' : 'BLUE VINYL'} back={view === 'record' ? () => setView('collage') : back} action={send} actionIcon="plane" actionLabel="여행지로 LP 보내기" />
     <div className={'focus-stage zoom-gesture' + (view === 'record' ? ' record-view' : '')}
       onTouchStart={(event) => { startDistance.current = pinchDistance(event.touches); }}

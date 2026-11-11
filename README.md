@@ -1,6 +1,7 @@
 # Blue Vinyl
 
 2026 FALL KAIST ID UXD project web prototype
+
 Blue Vinyl - Auditory Trace for your own journey
 
 ## 시작하기

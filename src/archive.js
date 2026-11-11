@@ -105,7 +105,19 @@ function selectedArt(album, art) {
   return art?.trackId ? album.entries.find((entry) => entry.id === art.trackId && entry.kind === 'photo') : art;
 }
 
-export const albumArt = (album) => selectedArt(album, album?.art);
+// Albums without a chosen photo get one of the sample travel photos, picked
+// pseudo-randomly from the album id so each album keeps the same one.
+const fillerPhotos = ['sky-wing.jpg', 'carry-on.jpg', 'boarding-bridge.jpg']
+  .map((file) => ({ id: 'filler-' + file, kind: 'photo', filler: true, src: import.meta.env.BASE_URL + 'art/' + file }));
+
+function fillerArt(album) {
+  if (!album?.id) return undefined;
+  let hash = 2166136261;
+  for (const char of 'blue-vinyl0:' + album.id) hash = Math.imul(hash ^ char.charCodeAt(0), 16777619);
+  return fillerPhotos[(hash >>> 0) % fillerPhotos.length];
+}
+
+export const albumArt = (album) => selectedArt(album, album?.art) || fillerArt(album);
 export const trackArt = (album, track) => selectedArt(album, track?.art) || (track?.kind === 'photo' ? track : undefined);
 
 async function encodeMedia({ blob, src }) {

@@ -9,7 +9,7 @@ import { JourneyConfirm, PressCompleted, PressRecord } from './press-record';
 import { ReturnMail, ShippingScreen } from './shipping';
 import { SongForm, TripMoment } from './trip-moment';
 import { Inbox } from './inbox';
-import { Arm, Icon, Plane, PullSleeve, Top, Vinyl, albumTitle, dateLabel, entryIcons, useMedia } from './ui';
+import { Arm, Icon, Plane, PullSleeve, SleeveFace, Top, Vinyl, albumTitle, dateLabel, entryIcons, useMedia } from './ui';
 import { Recorder, TrackMedia } from './recorder';
 import { TravelMap } from './map';
 import './style.css';
@@ -444,7 +444,7 @@ function App() {
               <button className={'sleeve sleeve-' + index % 3} aria-expanded={preview === item.id}
                 onClick={() => setPreview(preview === item.id ? '' : item.id)}>
                 <span className="spine"><strong>{albumTitle(item)}</strong><span>{dateLabel(item.start)}</span>{item.phase === 'trip' && <i />}</span>
-                <span className="sleeve-face" />
+                <SleeveFace album={item} />
               </button>
               {preview === item.id && <PullSleeve album={item} open={() => openAlbum(item)} />}
             </div>)}

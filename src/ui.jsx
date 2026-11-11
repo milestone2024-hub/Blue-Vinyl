@@ -110,6 +110,11 @@ export function Top({ title, back, action, actionIcon = 'list', actionLabel = 'ë
   </header>;
 }
 
+export function SleeveFace({ album }) {
+  const photo = useMedia(albumArt(album));
+  return <span className="sleeve-face">{photo && <img src={photo} alt="" loading="lazy" />}</span>;
+}
+
 export function Cover({ album }) {
   const photo = useMedia(albumArt(album));
   return <div className="cover" style={{ '--cover-color': album.color }}>

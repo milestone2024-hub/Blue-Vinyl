@@ -83,6 +83,7 @@ export function AlbumPlayer({ album, art, tracks, track, onTrack, back, send, au
   const layout = measured.length ? chooseLayout(measured) : 'pending';
   const coverPhoto = measured.find((photo) => photo.entry.id === panels[2]?.id);
   const plan = layout === 'spread' ? planSpread(coverPhoto, measured.filter((photo) => photo !== coverPhoto)) : null;
+  const songs = tracks.filter((entry) => entry.kind === 'audio');
   const playLabel = isMedia ? (playing ? '일시정지' : '트랙 재생') : '트랙 열기';
 
   if (zoom === 'moments') return <MomentMap album={album} tracks={tracks} back={() => setZoom('record')} />;
@@ -115,9 +116,9 @@ export function AlbumPlayer({ album, art, tracks, track, onTrack, back, send, au
       </div>}
       {view === 'collage' && plan && <Spread plan={plan} album={album} art={art} playing={playing} onPlay={openRecord} playLabel="LP 크게 보기" disabled={!track}
         tracks={tracks} track={track} onTrack={(entry) => { onTrack(entry); setReveal(false); }} title={albumTitle(album)} />}
-      {view === 'collage' && tracks.length > 0 && <section className="track-sheet" aria-label="트랙 리스트">
+      {view === 'collage' && songs.length > 0 && <section className="track-sheet" aria-label="트랙 리스트">
         <h2>Tracks</h2>
-        <ol>{tracks.map((entry, i) => <li key={entry.id}>
+        <ol>{songs.map((entry, i) => <li key={entry.id}>
           <button type="button" className={entry.id === track?.id ? 'current' : ''} aria-current={entry.id === track?.id ? 'true' : undefined}
             onClick={() => { onTrack(entry); setReveal(false); }}>
             <span className="track-sheet-no">{String(i + 1).padStart(2, '0')}</span>
